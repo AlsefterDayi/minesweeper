@@ -7,7 +7,7 @@ function Start() {
   const [level, setLevel] = useState("easy");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login } = useAuth();
 
   const handleStart = () => {
     if (!playerName.trim()) {
@@ -17,11 +17,8 @@ function Start() {
 
     setError("");
     login();
-    console.log("playerName", playerName);
-    console.log("level", level);
-    console.log("isAuthenticated", isAuthenticated);
 
-    navigate(`/game/`, { state: { playerName , level } });
+    navigate(`/game/`, { state: { playerName, level } });
   };
 
   return (
