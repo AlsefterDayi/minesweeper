@@ -1,8 +1,15 @@
 import { useLocation, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Cell from "../../../components/Cell";
-import type { CellType } from "../Model/GameModel";
 
+type CellType = {
+  row: number;
+  col: number;
+  mine: boolean;
+  revealed: boolean;
+  flagged: boolean;
+  number: number;
+};
 
 const getBoardConfig = (level: string) => {
   switch (level) {
@@ -105,6 +112,16 @@ const revealCell = (
   }
 };
 
+const checkWin = (board: CellType[][], rows: number, cols: number) => {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = board[r][c];
+      if (!cell.mine && !cell.revealed) return false;
+    }
+  }
+  return true;
+};
+
 const Game = () => {
   const location = useLocation();
   const state = location.state as { playerName: string; level: string } | null;
@@ -133,6 +150,8 @@ const Game = () => {
   const [isFirstClick, setIsFirstClick] = useState(true);
   const [time, setTime] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [youWon, setYouWon] = useState(false);
 
   useEffect(() => {
     let interval: any;
@@ -143,6 +162,8 @@ const Game = () => {
   }, [timerActive]);
 
   const handleCellClick = (row: number, col: number) => {
+    if (gameOver || youWon) return;
+
     let newBoard = board.map((r) => r.map((c) => ({ ...c })));
 
     if (isFirstClick) {
@@ -151,17 +172,32 @@ const Game = () => {
       setTimerActive(true);
     }
 
-    if (newBoard[row][col].mine) {
-      alert("Game Over!");
+    const cell = newBoard[row][col];
+    if (cell.mine) {
+      setGameOver(true);
+      setTimerActive(false);
+      newBoard.forEach((r) =>
+        r.forEach((c) => {
+          if (c.mine) c.revealed = true;
+        })
+      );
+      setBoard(newBoard);
       return;
     }
 
     revealCell(newBoard, row, col, rows, cols);
     setBoard(newBoard);
+
+    if (checkWin(newBoard, rows, cols)) {
+      setYouWon(true);
+      setTimerActive(false);
+    }
   };
 
   const handleRightClick = (e: React.MouseEvent, row: number, col: number) => {
     e.preventDefault();
+    if (gameOver || youWon) return;
+
     const newBoard = board.map((r) => r.map((c) => ({ ...c })));
     const cell = newBoard[row][col];
     if (!cell.revealed) {
@@ -171,6 +207,8 @@ const Game = () => {
   };
 
   const handleDoubleClick = (row: number, col: number) => {
+    if (gameOver || youWon) return;
+
     const cell = board[row][col];
     if (!cell.revealed || cell.number === 0) return;
 
@@ -181,15 +219,29 @@ const Game = () => {
 
     if (flaggedCount === cell.number) {
       const newBoard = board.map((r) => r.map((c) => ({ ...c })));
-      neighbors.forEach((n) => {
-        if (
-          !newBoard[n.row][n.col].revealed &&
-          !newBoard[n.row][n.col].flagged
-        ) {
+      for (let n of neighbors) {
+        const neighborCell = newBoard[n.row][n.col];
+        if (!neighborCell.revealed && !neighborCell.flagged) {
+          if (neighborCell.mine) {
+            setGameOver(true);
+            setTimerActive(false);
+            newBoard.forEach((r) =>
+              r.forEach((c) => {
+                if (c.mine) c.revealed = true;
+              })
+            );
+            setBoard(newBoard);
+            return;
+          }
           revealCell(newBoard, n.row, n.col, rows, cols);
         }
-      });
+      }
       setBoard(newBoard);
+
+      if (checkWin(newBoard, rows, cols)) {
+        setYouWon(true);
+        setTimerActive(false);
+      }
     }
   };
 
@@ -202,6 +254,8 @@ const Game = () => {
         <p className="mb-4 text-lg capitalize">Level: {level}</p>
         <p className="text-lg font-semibold">⏱ Time: {time}s</p>
         <p className="text-lg font-semibold">💣 Mines: {mines}</p>
+        {gameOver && <p className="text-red-600 text-2xl font-bold mt-4">GAME OVER</p>}
+        {youWon && <p className="text-green-600 text-2xl font-bold mt-4">YOU WON!</p>}
       </div>
 
       {/* Board */}
