@@ -47,7 +47,6 @@ const Game = () => {
       (boardHeight - (rows - 1) * 4) / rows
     )
   );
-
   const [board, setBoard] = useState<CellType[][]>(() =>
     createEmptyBoard(rows, cols)
   );
